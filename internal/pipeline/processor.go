@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"sync"
+	"m2loganalyzer/internal/util"
 )
 
 // Processor handles log events with a worker pool
@@ -69,4 +70,22 @@ func (p *Processor) Stop() {
 	p.cancel()
 	p.wg.Wait()
 	log.Println("All workers stopped")
+}
+
+func (p *Processor) processLog(logLine string) {
+	// Increment processed counter
+	util.LogsProcessed.Inc()
+
+	// TODO: parsing, enrichment, detector, alerting
+	log.Printf("Processing log: %s", logLine)
+}
+
+func (p *Processor) Submit(logLine string) {
+	select {
+	case p.jobs <- logLine:
+		util.LogsReceived.Inc() // Count received logs
+	default:
+		util.LogsDropped.Inc()  // Count dropped logs
+		log.Println("Dropping log (queue full)")
+	}
 }
