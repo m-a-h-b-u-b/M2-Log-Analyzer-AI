@@ -1,30 +1,40 @@
 package main
 
 import (
-	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"m2loganalyzer/internal/config"
+	"m2loganalyzer/internal/ingest"
 	"m2loganalyzer/internal/pipeline"
 )
 
 func main() {
+	// Load config
 	cfg, err := config.Load("configs/config.yaml")
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
-	// Create processor with config values
+	// Start pipeline processor
 	proc := pipeline.NewProcessor(cfg.Pipeline.WorkerCount, cfg.Pipeline.QueueSize)
 	proc.Start()
 
-	// Submit some test logs
-	for i := 0; i < 10; i++ {
-		proc.Submit(fmt.Sprintf("Test log #%d", i+1))
-	}
+	// Start HTTP ingestor
+	httpIngestor := ingest.NewHTTPIngestor(cfg, proc)
+	go func() {
+		if err := httpIngestor.Start(); err != nil {
+			log.Fatalf("HTTP ingestor error: %v", err)
+		}
+	}()
 
-	// Wait for user input to stop
-	fmt.Println("Press Enter to stop...")
-	fmt.Scanln()
+	// Wait for interrupt signal
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	<-sigCh
+
+	log.Println("Shutting down...")
 	proc.Stop()
 }
