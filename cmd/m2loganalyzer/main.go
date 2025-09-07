@@ -10,12 +10,13 @@ import (
 	"time"
 
 	"m2loganalyzer/internal/config"
+	"m2loganalyzer/internal/detector"
 	"m2loganalyzer/internal/ingest"
 	"m2loganalyzer/internal/pipeline"
 )
 
 func main() {
-	log.Println("=== Starting M2 Log Analyzer AI ===")
+	log.Println("=== Starting M2 Log Analyzer AI v0.2 ===")
 
 	// Load configuration
 	cfg, err := config.Load("configs/config.yaml")
@@ -23,8 +24,11 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Initialize pipeline processor
-	proc := pipeline.NewProcessor(cfg.Pipeline.WorkerCount, cfg.Pipeline.QueueSize)
+	// Initialize rolling z-score detector
+	det := detector.NewRollingZScoreDetector(cfg.Detector.WindowSize, cfg.Detector.Threshold)
+
+	// Initialize pipeline processor with rules & detector
+	proc := pipeline.NewProcessor(cfg.Pipeline.WorkerCount, cfg.Pipeline.QueueSize, &cfg.PipelineRules, det)
 	proc.Start()
 
 	// Initialize HTTP ingestor
@@ -36,9 +40,10 @@ func main() {
 		Handler: http.DefaultServeMux,
 	}
 
+	// Start HTTP server in goroutine
 	go func() {
 		log.Printf("HTTP ingestor listening on port %s", cfg.HTTP.Port)
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := httpIngestor.Start(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("HTTP server error: %v", err)
 		}
 	}()
@@ -62,5 +67,5 @@ func main() {
 	// Stop pipeline processor
 	proc.Stop()
 
-	log.Println("=== M2 Log Analyzer AI stopped gracefully ===")
+	log.Println("=== M2 Log Analyzer AI v0.2 stopped gracefully ===")
 }
