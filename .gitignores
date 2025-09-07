@@ -1,0 +1,18 @@
+# Binaries
+bin/
+*.exe
+*.out
+
+# Go build cache
+*.test
+
+# Logs
+*.log
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+
+# Dependencies
+vendor/
