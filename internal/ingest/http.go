@@ -8,6 +8,7 @@ import (
 
 	"m2loganalyzer/internal/config"
 	"m2loganalyzer/internal/pipeline"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // HTTPIngestor handles HTTP log ingestion
@@ -52,4 +53,16 @@ func (h *HTTPIngestor) handleIngest(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusAccepted)
 	w.Write([]byte("Log accepted"))
+}
+
+func (h *HTTPIngestor) Start() error {
+	// Existing ingest handler
+	http.HandleFunc("/ingest", h.handleIngest)
+
+	// Add /metrics endpoint for Prometheus
+	http.Handle("/metrics", promhttp.Handler())
+
+	addr := fmt.Sprintf(":%s", h.cfg.HTTP.Port)
+	log.Printf("HTTP ingestor listening on %s", addr)
+	return http.ListenAndServe(addr, nil)
 }
