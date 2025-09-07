@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"m2loganalyzer/internal/config"
+	"m2loganalyzer/internal/pipeline"
 )
 
 func main() {
@@ -13,8 +14,17 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
-	fmt.Printf("HTTP Port: %s\n", cfg.HTTP.Port)
-	fmt.Printf("Pipeline Workers: %d\n", cfg.Pipeline.WorkerCount)
-	fmt.Printf("Detector Type: %s\n", cfg.Detector.Type)
-	fmt.Printf("Slack Webhook: %s\n", cfg.Alerts.SlackWebhook)
+	// Create processor with config values
+	proc := pipeline.NewProcessor(cfg.Pipeline.WorkerCount, cfg.Pipeline.QueueSize)
+	proc.Start()
+
+	// Submit some test logs
+	for i := 0; i < 10; i++ {
+		proc.Submit(fmt.Sprintf("Test log #%d", i+1))
+	}
+
+	// Wait for user input to stop
+	fmt.Println("Press Enter to stop...")
+	fmt.Scanln()
+	proc.Stop()
 }
