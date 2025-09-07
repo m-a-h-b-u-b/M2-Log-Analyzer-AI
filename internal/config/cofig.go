@@ -28,6 +28,13 @@ type Config struct {
 		SlackWebhook string `yaml:"slack_webhook"`
 		Email        string `yaml:"email"`
 	} `yaml:"alerts"`
+	
+	PipelineRules PipelineRules `yaml:"pipeline_rules"`
+}
+
+type PipelineRules struct {
+	SlackWebhook string `yaml:"slack_webhook"`
+	Webhook      string `yaml:"webhook"`
 }
 
 // Load reads the YAML config file and unmarshals it

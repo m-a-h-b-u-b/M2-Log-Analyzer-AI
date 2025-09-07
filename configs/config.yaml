@@ -13,3 +13,7 @@ detector:
 alerts:
   slack_webhook: "https://hooks.slack.com/services/XXXXX/XXXXX/XXXXX"
   email: "alerts@example.com"
+
+pipeline_rules:
+  slack_webhook: "https://hooks.slack.com/services/XXXXX/XXXXX/XXXXX"
+  webhook: "https://example.com/alert"
