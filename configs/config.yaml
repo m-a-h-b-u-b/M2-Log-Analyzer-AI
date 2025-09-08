@@ -6,14 +6,18 @@ pipeline:
   queue_size: 1000
 
 detector:
-  type: "rolling_zscore"
+  type: "iforest"
   window_size: 50
   threshold: 3.0
+  onnx_model_path: "models/iforest.onnx"
 
 alerts:
-  slack_webhook: "https://hooks.slack.com/services/XXXXX/XXXXX/XXXXX"
-  email: "alerts@example.com"
+  slack_webhook: ""
+  webhook: ""
 
-pipeline_rules:
-  slack_webhook: "https://hooks.slack.com/services/XXXXX/XXXXX/XXXXX"
-  webhook: "https://example.com/alert"
+storage:
+  sqlite_path: "data/m2loganalyzer.db"
+
+training:
+  python_train_script: "tools/train_iforest.py"
+  training_features: ["length"]  # example: features to use from logs
