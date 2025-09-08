@@ -1,9 +1,12 @@
 
-# M2-Log-Analyzer-AI
+# M2 Log Analyzer AI
+
 
 [![Go](https://img.shields.io/badge/Go-1.21-blue?style=flat-square)](https://golang.org/)
 [![Kafka](https://img.shields.io/badge/Kafka-Event%20Streaming-orange?style=flat-square)](https://kafka.apache.org/)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-Helm-blue?style=flat-square)](https://kubernetes.io/)
+[![Prometheus](https://img.shields.io/badge/Prometheus-Monitoring-red?style=flat-square)](https://prometheus.io/)
+[![Docker](https://img.shields.io/badge/Docker-Container-blue?style=flat-square)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-Apache--2.0-green?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
 
 
@@ -11,7 +14,6 @@
 
 It supports **multi-tenant deployments, scalable storage backends, and enterprise-ready dashboards**, making it a minimal yet powerful alternative to ELK.
 
----
 
 ## Author 
 
