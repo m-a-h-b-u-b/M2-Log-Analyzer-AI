@@ -7,7 +7,6 @@
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-Helm-blue?style=flat-square)](https://kubernetes.io/)
 [![Prometheus](https://img.shields.io/badge/Prometheus-Monitoring-red?style=flat-square)](https://prometheus.io/)
 [![Docker](https://img.shields.io/badge/Docker-Container-blue?style=flat-square)](https://www.docker.com/)
-[![License](https://img.shields.io/badge/License-Apache--2.0-green?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
 
 
 **M2-Log-Analyzer-AI** is a **lightweight, AI-powered log analysis system** built in **Go**, designed for **real-time ingestion, stream processing, anomaly detection, alerting, and analytics**.  
@@ -166,4 +165,12 @@ tenants:
 
 ## License
 
-Apache 2.0 License – See [LICENSE](LICENSE) file for details.
+![Apache 2.0 License](https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square)  
+![Dual License](https://img.shields.io/badge/License-Dual%20License-green?style=flat-square) 
+
+This project is **dual-licensed**:
+
+- **Open-Source / Personal Use:** Apache 2.0  
+- **Commercial / Closed-Source Use:** Proprietary license required 
+
+For commercial licensing inquiries or enterprise use, please contact: [mahbub.aaman.app@gmail.com](mailto:mahbub.aaman.app@gmail.com)
