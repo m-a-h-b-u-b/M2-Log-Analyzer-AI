@@ -7,15 +7,13 @@
 [![License](https://img.shields.io/badge/License-Apache--2.0-green?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
 
 
-## Overview
-
 **M2-Log-Analyzer-AI** is a **lightweight, AI-powered log analysis system** built in **Go**, designed for **real-time ingestion, stream processing, anomaly detection, alerting, and analytics**.  
 
 It supports **multi-tenant deployments, scalable storage backends, and enterprise-ready dashboards**, making it a minimal yet powerful alternative to ELK.
 
 ---
 
-## Contact
+## Author 
 
 * **Author**: Md Mahbubur Rahman
 * **GitHub**: [https://github.com/m-a-h-b-u-b](https://github.com/m-a-h-b-u-b)
