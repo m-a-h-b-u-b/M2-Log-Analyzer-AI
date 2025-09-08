@@ -1,0 +1,33 @@
+//! Module Name: clickhouse.go
+//! --------------------------------
+//! License : Apache 2.0
+//! Author  : Md Mahbubur Rahman
+//! URL     : https://m-a-h-b-u-b.github.io
+//! GitHub  : https://github.com/m-a-h-b-u-b/M2-Log-Analyzer-AI
+//!
+//! Module Description:
+//! ClickHouse backend for high-performance log storage and analytics.
+
+package storage
+
+import (
+	"database/sql"
+	_ "github.com/ClickHouse/clickhouse-go"
+)
+
+type ClickHouseStorage struct {
+	db *sql.DB
+}
+
+func NewClickHouse(addr string) (*ClickHouseStorage, error) {
+	db, err := sql.Open("clickhouse", addr)
+	if err != nil {
+		return nil, err
+	}
+	return &ClickHouseStorage{db: db}, nil
+}
+
+func (c *ClickHouseStorage) InsertLog(message, level, source string) error {
+	_, err := c.db.Exec("INSERT INTO logs(message, level, source) VALUES (?, ?, ?)", message, level, source)
+	return err
+}
