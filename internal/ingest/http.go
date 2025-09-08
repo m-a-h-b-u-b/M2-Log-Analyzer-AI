@@ -1,68 +1,45 @@
+//! Module Name: http.go
+//! --------------------------------
+//! License : Apache 2.0
+//! Author  : Md Mahbubur Rahman
+//! URL     : https://m-a-h-b-u-b.github.io
+//! GitHub  : https://github.com/m-a-h-b-u-b/M2-Log-Analyzer-AI
+//!
+//! Module Description:
+//! HTTP ingestor that accepts log events via POST and feeds them into the pipeline.
+
 package ingest
 
 import (
-	"fmt"
-	"io/ioutil"
-	"log"
+	"encoding/json"
 	"net/http"
 
-	"m2loganalyzer/internal/config"
 	"m2loganalyzer/internal/pipeline"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"m2loganalyzer/internal/util"
 )
 
-// HTTPIngestor handles HTTP log ingestion
 type HTTPIngestor struct {
-	cfg  *config.Config
 	proc *pipeline.Processor
 }
 
-// NewHTTPIngestor creates a new HTTP ingestor
-func NewHTTPIngestor(cfg *config.Config, proc *pipeline.Processor) *HTTPIngestor {
-	return &HTTPIngestor{
-		cfg:  cfg,
-		proc: proc,
-	}
+func NewHTTPIngestor(proc *pipeline.Processor) *HTTPIngestor {
+	return &HTTPIngestor{proc: proc}
 }
 
-// Start runs the HTTP server for ingestion
-func (h *HTTPIngestor) Start() error {
-	http.HandleFunc("/ingest", h.handleIngest)
-
-	addr := fmt.Sprintf(":%s", h.cfg.HTTP.Port)
-	log.Printf("HTTP ingestor listening on %s", addr)
-	return http.ListenAndServe(addr, nil)
+func (h *HTTPIngestor) Router() http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/ingest", h.handleIngest)
+	mux.Handle("/metrics", util.PrometheusHandler())
+	return mux
 }
 
-// handleIngest receives logs via POST and submits them to the pipeline
 func (h *HTTPIngestor) handleIngest(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	var event pipeline.LogEvent
+	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+		http.Error(w, "invalid log format", http.StatusBadRequest)
 		return
 	}
-
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "Failed to read body", http.StatusBadRequest)
-		return
-	}
-	defer r.Body.Close()
-
-	logLine := string(body)
-	h.proc.Submit(logLine)
-
+	h.proc.Submit(event)
+	util.IncLogsReceived()
 	w.WriteHeader(http.StatusAccepted)
-	w.Write([]byte("Log accepted"))
-}
-
-func (h *HTTPIngestor) Start() error {
-	// Existing ingest handler
-	http.HandleFunc("/ingest", h.handleIngest)
-
-	// Add /metrics endpoint for Prometheus
-	http.Handle("/metrics", promhttp.Handler())
-
-	addr := fmt.Sprintf(":%s", h.cfg.HTTP.Port)
-	log.Printf("HTTP ingestor listening on %s", addr)
-	return http.ListenAndServe(addr, nil)
 }

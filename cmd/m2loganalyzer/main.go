@@ -1,71 +1,51 @@
+//! Module Name: main.go
+//! --------------------------------
+//! License : Apache 2.0
+//! Author  : Md Mahbubur Rahman
+//! URL     : https://m-a-h-b-u-b.github.io
+//! GitHub  : https://github.com/m-a-h-b-u-b/M2-Log-Analyzer-AI
+//!
+//! Module Description:
+//! Main entrypoint that wires configuration, ingestion, pipeline,
+//! anomaly detectors, storage backends, and alerting.
+
 package main
 
 import (
-	"context"
 	"log"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
+	"m2loganalyzer/internal/api"
 	"m2loganalyzer/internal/config"
-	"m2loganalyzer/internal/detector"
 	"m2loganalyzer/internal/ingest"
 	"m2loganalyzer/internal/pipeline"
+	"m2loganalyzer/internal/util"
 )
 
 func main() {
-	log.Println("=== Starting M2 Log Analyzer AI v0.2 ===")
-
-	// Load configuration
-	cfg, err := config.Load("configs/config.yaml")
+	// Load config
+	cfg, err := config.LoadConfig("configs/config.yaml")
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		log.Fatalf("failed to load config: %v", err)
 	}
 
-	// Initialize rolling z-score detector
-	det := detector.NewRollingZScoreDetector(cfg.Detector.WindowSize, cfg.Detector.Threshold)
+	// Init metrics
+	util.InitMetrics()
 
-	// Initialize pipeline processor with rules & detector
-	proc := pipeline.NewProcessor(cfg.Pipeline.WorkerCount, cfg.Pipeline.QueueSize, &cfg.PipelineRules, det)
-	proc.Start()
+	// Init pipeline
+	proc := pipeline.NewProcessor(cfg.Workers, cfg.QueueSize)
+	go proc.Start()
 
-	// Initialize HTTP ingestor
-	httpIngestor := ingest.NewHTTPIngestor(cfg, proc)
-
-	// HTTP server with graceful shutdown
-	server := &http.Server{
-		Addr:    ":" + cfg.HTTP.Port,
-		Handler: http.DefaultServeMux,
-	}
-
-	// Start HTTP server in goroutine
+	// Init HTTP ingestor
+	httpIngest := ingest.NewHTTPIngestor(proc)
 	go func() {
-		log.Printf("HTTP ingestor listening on port %s", cfg.HTTP.Port)
-		if err := httpIngestor.Start(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("HTTP server error: %v", err)
+		log.Printf("HTTP ingestor listening on :%d", cfg.ServerPort)
+		if err := http.ListenAndServe(
+			":"+string(rune(cfg.ServerPort)), httpIngest.Router()); err != nil {
+			log.Fatalf("HTTP server failed: %v", err)
 		}
 	}()
 
-	// Listen for OS signals (Ctrl+C / SIGTERM)
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-	<-sigCh
-
-	log.Println("Shutdown signal received, cleaning up...")
-
-	// Shutdown HTTP server gracefully
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := server.Shutdown(ctx); err != nil {
-		log.Printf("HTTP server shutdown error: %v", err)
-	} else {
-		log.Println("HTTP server stopped")
-	}
-
-	// Stop pipeline processor
-	proc.Stop()
-
-	log.Println("=== M2 Log Analyzer AI v0.2 stopped gracefully ===")
+	// Init API server
+	api.StartServer(cfg, proc)
 }

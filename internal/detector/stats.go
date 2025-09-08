@@ -1,61 +1,51 @@
+//! Module Name: stats.go
+//! --------------------------------
+//! License : Apache 2.0
+//! Author  : Md Mahbubur Rahman
+//! URL     : https://m-a-h-b-u-b.github.io
+//! GitHub  : https://github.com/m-a-h-b-u-b/M2-Log-Analyzer-AI
+//!
+//! Module Description:
+//! Rolling z-score anomaly detection for log metrics.
+
 package detector
 
-import (
-	"math"
-	"sync"
-)
+import "math"
 
-// RollingZScoreDetector detects anomalies based on rolling mean/std
-type RollingZScoreDetector struct {
-	window    []float64
-	size      int
-	threshold float64
-	mutex     sync.Mutex
+type ZScoreDetector struct {
+	window []float64
+	size   int
 }
 
-// NewRollingZScoreDetector creates a new detector
-func NewRollingZScoreDetector(windowSize int, threshold float64) *RollingZScoreDetector {
-	return &RollingZScoreDetector{
-		window:    make([]float64, 0, windowSize),
-		size:      windowSize,
-		threshold: threshold,
-	}
+func NewZScoreDetector(size int) *ZScoreDetector {
+	return &ZScoreDetector{size: size}
 }
 
-// AddValue adds a new value and returns true if anomaly
-func (d *RollingZScoreDetector) AddValue(val float64) bool {
-	d.mutex.Lock()
-	defer d.mutex.Unlock()
-
-	if len(d.window) >= d.size {
+func (d *ZScoreDetector) Add(value float64) bool {
+	d.window = append(d.window, value)
+	if len(d.window) > d.size {
 		d.window = d.window[1:]
 	}
-	d.window = append(d.window, val)
 
 	mean, std := d.meanStd()
 	if std == 0 {
 		return false
 	}
-	z := math.Abs((val - mean) / std)
-	return z > d.threshold
+	z := (value - mean) / std
+	return math.Abs(z) > 3.0
 }
 
-// meanStd computes mean and standard deviation
-func (d *RollingZScoreDetector) meanStd() (float64, float64) {
-	n := float64(len(d.window))
-	if n == 0 {
-		return 0, 0
-	}
+func (d *ZScoreDetector) meanStd() (float64, float64) {
 	sum := 0.0
 	for _, v := range d.window {
 		sum += v
 	}
-	mean := sum / n
+	mean := sum / float64(len(d.window))
 
 	variance := 0.0
 	for _, v := range d.window {
 		variance += (v - mean) * (v - mean)
 	}
-	std := math.Sqrt(variance / n)
+	std := math.Sqrt(variance / float64(len(d.window)))
 	return mean, std
 }

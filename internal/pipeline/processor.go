@@ -1,126 +1,64 @@
+//! Module Name: processor.go
+//! --------------------------------
+//! License : Apache 2.0
+//! Author  : Md Mahbubur Rahman
+//! URL     : https://m-a-h-b-u-b.github.io
+//! GitHub  : https://github.com/m-a-h-b-u-b/M2-Log-Analyzer-AI
+//!
+//! Module Description:
+//! Worker pool processor that receives log events, processes them,
+//! and forwards to detectors, storage, and alerts.
+
 package pipeline
 
 import (
-	"context"
 	"log"
 	"sync"
-	"m2loganalyzer/internal/util"
-	"m2loganalyzer/internal/detector"
-	"m2loganalyzer/internal/config"
+
 	"m2loganalyzer/internal/util"
 )
 
-// Processor handles log events with a worker pool
+type LogEvent struct {
+	Message string `json:"message"`
+	Level   string `json:"level"`
+	Source  string `json:"source"`
+}
+
 type Processor struct {
-	jobs       chan string
-	workerCount int
-	wg         sync.WaitGroup
-	ctx        context.Context
-	cancel     context.CancelFunc
-	rules   *config.PipelineRules
-	detector *detector.RollingZScoreDetector
+	workers int
+	queue   chan LogEvent
+	wg      sync.WaitGroup
 }
 
-// NewProcessor creates a new processor
-func NewProcessor(workerCount, queueSize int) *Processor {
-	ctx, cancel := context.WithCancel(context.Background())
+func NewProcessor(workers, queueSize int) *Processor {
 	return &Processor{
-		jobs:        make(chan string, queueSize),
-		workerCount: workerCount,
-		ctx:         ctx,
-		cancel:      cancel,
+		workers: workers,
+		queue:   make(chan LogEvent, queueSize),
 	}
 }
 
-// Start launches worker goroutines
 func (p *Processor) Start() {
-	for i := 0; i < p.workerCount; i++ {
+	for i := 0; i < p.workers; i++ {
 		p.wg.Add(1)
-		go p.worker(i)
-	}
-	log.Printf("Started %d pipeline workers", p.workerCount)
-}
-
-// worker processes log events
-func (p *Processor) worker(id int) {
-	defer p.wg.Done()
-	for {
-		select {
-		case <-p.ctx.Done():
-			log.Printf("Worker %d shutting down...", id)
-			return
-		case logLine := <-p.jobs:
-			p.processLog(logLine)
-		}
+		go func(id int) {
+			defer p.wg.Done()
+			for event := range p.queue {
+				log.Printf("[worker %d] processing log: %+v", id, event)
+				util.IncLogsProcessed()
+			}
+		}(i)
 	}
 }
 
-// processLog is a placeholder for actual processing logic
-func (p *Processor) processLog(logLine string) {
-	// TODO: parsing, enrichment, detector, alerting
-	log.Printf("Processing log: %s", logLine)
-}
-
-// Submit adds a log line to the queue
-func (p *Processor) Submit(logLine string) {
+func (p *Processor) Submit(event LogEvent) {
 	select {
-	case p.jobs <- logLine:
+	case p.queue <- event:
 	default:
-		log.Println("Dropping log (queue full)")
+		util.IncLogsDropped()
 	}
 }
 
-// Stop gracefully stops all workers
 func (p *Processor) Stop() {
-	p.cancel()
+	close(p.queue)
 	p.wg.Wait()
-	log.Println("All workers stopped")
-}
-
-func (p *Processor) processLog(logLine string) {
-	// Increment processed counter
-	util.LogsProcessed.Inc()
-
-	// TODO: parsing, enrichment, detector, alerting
-	log.Printf("Processing log: %s", logLine)
-}
-
-func (p *Processor) Submit(logLine string) {
-	select {
-	case p.jobs <- logLine:
-		util.LogsReceived.Inc() // Count received logs
-	default:
-		util.LogsDropped.Inc()  // Count dropped logs
-		log.Println("Dropping log (queue full)")
-	}
-}
-
-func NewProcessor(workerCount, queueSize int, rules *config.PipelineRules, det *detector.RollingZScoreDetector) *Processor {
-	ctx, cancel := context.WithCancel(context.Background())
-	return &Processor{
-		jobs:        make(chan string, queueSize),
-		workerCount: workerCount,
-		ctx:         ctx,
-		cancel:      cancel,
-		rules:       rules,
-		detector:    det,
-	}
-}
-
-func (p *Processor) processLog(logLine string) {
-	util.LogsProcessed.Inc()
-
-	// Convert log to float for demo purposes (e.g., metric value)
-	val := float64(len(logLine)) // Example: log length as value
-
-	// Apply rolling z-score
-	if p.detector.AddValue(val) {
-		log.Printf("Anomaly detected: %s", logLine)
-		if p.rules.SlackWebhook != "" {
-			go alertSlack(p.rules.SlackWebhook, logLine)
-		}
-		if p.rules.Webhook != "" {
-			go alertWebhook(p.rules.Webhook, logLine)
-		}
-	}
 }

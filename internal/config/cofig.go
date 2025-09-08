@@ -1,52 +1,37 @@
+//! Module Name: config.go
+//! --------------------------------
+//! License : Apache 2.0
+//! Author  : Md Mahbubur Rahman
+//! URL     : https://m-a-h-b-u-b.github.io
+//! GitHub  : https://github.com/m-a-h-b-u-b/M2-Log-Analyzer-AI
+//!
+//! Module Description:
+//! Loads YAML configuration into structured Go types with default handling.
+
 package config
 
 import (
 	"os"
-
 	"gopkg.in/yaml.v3"
-	"log"
 )
 
-// Config is the global configuration struct
 type Config struct {
-	HTTP struct {
-		Port string `yaml:"port"`
-	} `yaml:"http"`
-
-	Pipeline struct {
-		WorkerCount int `yaml:"worker_count"`
-		QueueSize   int `yaml:"queue_size"`
-	} `yaml:"pipeline"`
-
-	Detector struct {
-		Type       string  `yaml:"type"`
-		WindowSize int     `yaml:"window_size"`
-		Threshold  float64 `yaml:"threshold"`
-	} `yaml:"detector"`
-
-	Alerts struct {
-		SlackWebhook string `yaml:"slack_webhook"`
-		Email        string `yaml:"email"`
-	} `yaml:"alerts"`
-	
-	PipelineRules PipelineRules `yaml:"pipeline_rules"`
+	ServerPort int `yaml:"server_port"`
+	Workers    int `yaml:"workers"`
+	QueueSize  int `yaml:"queue_size"`
 }
 
-type PipelineRules struct {
-	SlackWebhook string `yaml:"slack_webhook"`
-	Webhook      string `yaml:"webhook"`
-}
-
-// Load reads the YAML config file and unmarshals it
-func Load(path string) (*Config, error) {
-	data, err := os.ReadFile(path)
+func LoadConfig(path string) (*Config, error) {
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	var cfg Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
+	defer f.Close()
+
+	cfg := &Config{}
+	decoder := yaml.NewDecoder(f)
+	if err := decoder.Decode(cfg); err != nil {
 		return nil, err
 	}
-	log.Printf("Loaded config from %s", path)
-	return &cfg, nil
+	return cfg, nil
 }

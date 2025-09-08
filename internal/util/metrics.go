@@ -1,26 +1,44 @@
+//! Module Name: metrics.go
+//! --------------------------------
+//! License : Apache 2.0
+//! Author  : Md Mahbubur Rahman
+//! URL     : https://m-a-h-b-u-b.github.io
+//! GitHub  : https://github.com/m-a-h-b-u-b/M2-Log-Analyzer-AI
+//!
+//! Module Description:
+//! Prometheus metrics collector for logs received, processed, and dropped.
+
 package util
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"net/http"
 )
 
 var (
-	// Total logs received by HTTP ingestor
-	LogsReceived = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "m2_logs_received_total",
-		Help: "Total number of logs received by HTTP ingestor",
+	logsReceived = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "logs_received_total",
+		Help: "Total number of logs received",
 	})
-
-	// Total logs successfully processed by pipeline
-	LogsProcessed = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "m2_logs_processed_total",
-		Help: "Total number of logs processed by pipeline",
+	logsProcessed = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "logs_processed_total",
+		Help: "Total number of logs processed",
 	})
-
-	// Total logs dropped due to full queue
-	LogsDropped = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "m2_logs_dropped_total",
-		Help: "Total number of logs dropped due to full queue",
+	logsDropped = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "logs_dropped_total",
+		Help: "Total number of logs dropped due to queue overflow",
 	})
 )
+
+func InitMetrics() {
+	prometheus.MustRegister(logsReceived, logsProcessed, logsDropped)
+}
+
+func IncLogsReceived() { logsReceived.Inc() }
+func IncLogsProcessed() { logsProcessed.Inc() }
+func IncLogsDropped()  { logsDropped.Inc() }
+
+func PrometheusHandler() http.Handler {
+	return promhttp.Handler()
+}
