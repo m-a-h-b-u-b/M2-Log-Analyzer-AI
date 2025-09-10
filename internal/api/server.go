@@ -13,12 +13,21 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"m2loganalyzer/internal/pipeline"
 )
+
+// retrainResponse defines the JSON response for retrain requests
+type retrainResponse struct {
+	Status  string `json:"status"`
+	Message string `json:"message,omitempty"`
+	Time    string `json:"time"`
+}
 
 func StartServer(cfg interface{}, proc *pipeline.Processor) {
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -26,10 +35,34 @@ func StartServer(cfg interface{}, proc *pipeline.Processor) {
 	})
 
 	http.HandleFunc("/retrain", func(w http.ResponseWriter, r *http.Request) {
-		// TODO: implement retraining logic
-		fmt.Fprintln(w, "retrain triggered")
+		if r.Method != http.MethodPost {
+			http.Error(w, "Only POST allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Respond immediately, run retraining in background
+		go func() {
+			log.Println("[Retrain] Starting retraining process...")
+			err := proc.Retrain() // <-- you need to implement this inside pipeline.Processor
+			if err != nil {
+				log.Printf("[Retrain] Failed: %v\n", err)
+			} else {
+				log.Println("[Retrain] Completed successfully.")
+			}
+		}()
+
+		resp := retrainResponse{
+			Status: "accepted",
+			Time:   time.Now().Format(time.RFC3339),
+			Message: "Retraining has been triggered. " +
+				"Check logs for progress.",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
 	})
 
 	log.Println("API server running on :8080")
-	http.ListenAndServe(":8080", nil)
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Fatalf("Server failed: %v", err)
+	}
 }
